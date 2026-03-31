@@ -1,17 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     Search,
-    UserPlus,
     MoreVertical,
-    Mail,
-    Phone,
-    GraduationCap,
-    Filter,
     Download,
     Users,
-    CheckCircle2,
-    Clock,
-    TrendingUp
+    Loader2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -34,67 +27,50 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
-const studentsData = [
-    {
-        id: "STU001",
-        name: "Hussen JD",
-        email: "hussen@example.com",
-        grade: "Grade 12",
-        status: "active",
-        attendance: "95%",
-        lastActive: "2 mins ago",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Hussen"
-    },
-    {
-        id: "STU002",
-        name: "Sarah Miller",
-        email: "sarah.m@example.com",
-        grade: "Grade 11",
-        status: "active",
-        attendance: "88%",
-        lastActive: "1 hour ago",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah"
-    },
-    {
-        id: "STU003",
-        name: "Robert Fox",
-        email: "robert.f@example.com",
-        grade: "Grade 12",
-        status: "inactive",
-        attendance: "72%",
-        lastActive: "2 days ago",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Robert"
-    },
-    {
-        id: "STU004",
-        name: "Emily Wang",
-        email: "emily.w@example.com",
-        grade: "Grade 10",
-        status: "active",
-        attendance: "98%",
-        lastActive: "Just now",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Emily"
-    },
-    {
-        id: "STU005",
-        name: "Michael Chen",
-        email: "m.chen@example.com",
-        grade: "Grade 12",
-        status: "active",
-        attendance: "91%",
-        lastActive: "5 mins ago",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Michael"
-    }
-];
+import { useCourses } from "@/hooks/use-courses";
+import { useAuthStore } from "@/store/auth-store";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 const Students = () => {
+    const { user } = useAuthStore();
+    const { useGetCourses, useGetCourseStudents } = useCourses();
     const [searchQuery, setSearchQuery] = useState("");
+    const [selectedCourseId, setSelectedCourseId] = useState<string>("");
 
-    const filteredStudents = studentsData.filter(student =>
-        student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        student.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        student.email.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    // Fetch tutor's courses
+    const { data: coursesData, isLoading: isLoadingCourses } = useGetCourses({
+        tutorId: user?.id,
+        status: "PUBLISHED"
+    });
+
+    // Fetch students for the selected course
+    const { data: studentsDataResponse, isLoading: isLoadingStudents } = useGetCourseStudents(selectedCourseId);
+
+    const students = studentsDataResponse?.data || [];
+
+    const filteredStudents = students.filter((enrollment: any) => {
+        const studentName = `${enrollment.user.firstName} ${enrollment.user.lastName}`.toLowerCase();
+        const studentId = enrollment.userId.toLowerCase();
+        const studentEmail = enrollment.user.email.toLowerCase();
+        const query = searchQuery.toLowerCase();
+
+        return studentName.includes(query) ||
+            studentId.includes(query) ||
+            studentEmail.includes(query);
+    });
+
+    // Handle initial course selection
+    useEffect(() => {
+        if (!selectedCourseId && coursesData?.data && coursesData.data.length > 0) {
+            setSelectedCourseId(coursesData.data[0].id);
+        }
+    }, [coursesData, selectedCourseId]);
 
     return (
         <div className="space-y-6 max-w-7xl animate-in fade-in duration-700 pb-10">
@@ -105,22 +81,29 @@ const Students = () => {
                     <p className="text-slate-500 text-[12px] font-medium mt-1">Manage student enrollments and track academic engagement across all grades.</p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
+                        <SelectTrigger className="w-[200px] h-10 border-slate-200 rounded uppercase text-[10px] font-bold">
+                            <SelectValue placeholder="Select Course" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {coursesData?.data?.map((course: any) => (
+                                <SelectItem key={course.id} value={course.id} className="text-[11px] uppercase font-bold">
+                                    {course.title}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                     <Button variant="outline" size="sm" className="rounded border-slate-200 text-xs font-bold uppercase  h-10 px-4">
                         <Download className="h-4 w-4 mr-2" /> Export PDF
                     </Button>
-                    <Button size="sm" className="rounded text-white text-xs font-bold uppercase  h-10 px-4">
-                        <UserPlus className="h-4 w-4 mr-2" /> Add Student
-                    </Button>
+
                 </div>
             </div>
 
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 px-2">
                 {[
-                    { label: "Total Students", value: "1,284", icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
-                    { label: "Currently Active", value: "482", icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50" },
-                    { label: "Avg Attendance", value: "92.4%", icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
-                    { label: "Performance", value: "+12.5%", icon: TrendingUp, color: "text-purple-600", bg: "bg-purple-50" },
+                    { label: "Current Enrollments", value: studentsDataResponse?.meta?.total?.toLocaleString() || "0", icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
                 ].map((stat, i) => (
                     <Card key={i} className="rounded-sm border-none shadow-none hover:shadow-md transition-all relative overflow-hidden group bg-white">
                         <div className="absolute -right-2 -bottom-2 text-slate-100 opacity-20 pointer-events-none group-hover:scale-125 transition-transform duration-500">
@@ -151,64 +134,56 @@ const Students = () => {
                             className="pl-9 h-9 rounded focus-visible:ring-0 focus-visible:ring-offset-0 border- outline-none focus:border-primary bg-white/70 border ring-0 ring-border/50 focus-visible:ring-primary text-xs font-medium"
                         />
                     </div>
-                    <div className="flex gap-2">
-                        <Button variant="outline" size="sm" className="border-none bg-transparent rounded-none h-10 px-4 text-xs font-bold ">
-                            <Filter className="h-4 w-4 mr-2" /> Grade Filter
-                        </Button>
-                    </div>
+
                 </CardHeader>
                 <CardContent className="p-0">
                     <Table>
                         <TableHeader className="bg-slate-50/50">
                             <TableRow className="hover:bg-transparent border-none">
                                 <TableHead className=" text-[10px] uppercase font-bold  text-slate-700 h-12 px-6">Student</TableHead>
-                                <TableHead className=" text-[10px] uppercase font-bold  text-slate-700 h-12">Student ID</TableHead>
-                                <TableHead className=" text-[10px] uppercase font-bold  text-slate-700 h-12">Grade Level</TableHead>
-                                <TableHead className=" text-[10px] uppercase font-bold  text-slate-700 h-12">Attendance</TableHead>
-                                <TableHead className=" text-[10px] uppercase font-bold  text-slate-700 h-12">Status</TableHead>
-                                <TableHead className=" text-[10px] uppercase font-bold  text-slate-700 h-12">Last Activity</TableHead>
+                                <TableHead className=" text-[10px] uppercase font-bold  text-slate-700 h-12">User ID</TableHead>
+                                <TableHead className=" text-[10px] uppercase font-bold  text-slate-700 h-12">Enrollment Status</TableHead>
+                                <TableHead className=" text-[10px] uppercase font-bold  text-slate-700 h-12">Joined Date</TableHead>
                                 <TableHead className="w-[50px]"></TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredStudents.length > 0 ? (
-                                filteredStudents.map((student) => (
-                                    <TableRow key={student.id} className="group hover:bg-slate-50/30 transition-colors border-slate-50">
+                            {isLoadingStudents ? (
+                                <TableRow>
+                                    <TableCell colSpan={7} className="h-32 text-center">
+                                        <Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-300" />
+                                    </TableCell>
+                                </TableRow>
+                            ) : filteredStudents.length > 0 ? (
+                                filteredStudents.map((enrollment: any) => (
+                                    <TableRow key={enrollment.id} className="group hover:bg-slate-50/30 transition-colors border-slate-50">
                                         <TableCell className="px-6 py-4">
                                             <div className="flex items-center gap-3">
                                                 <Avatar className="h-9 w-9 shadow-none rounded-none">
-                                                    <AvatarImage src={student.avatar} />
-                                                    <AvatarFallback>{student.name[0]}</AvatarFallback>
+                                                    <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${enrollment.user.firstName}`} />
+                                                    <AvatarFallback>{enrollment.user.firstName[0]}</AvatarFallback>
                                                 </Avatar>
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-bold text-slate-900">{student.name}</span>
-                                                    <span className="text-[11px] text-slate-400 font-medium">{student.email}</span>
+                                                    <span className="text-sm font-bold text-slate-900">{enrollment.user.firstName} {enrollment.user.lastName}</span>
+                                                    <span className="text-[11px] text-slate-400 font-medium">{enrollment.user.email}</span>
                                                 </div>
                                             </div>
                                         </TableCell>
                                         <TableCell>
                                             <code className="text-[11px] font-bold text-slate-500 bg-slate-50 px-1.5 py-0.5 border border-slate-100">
-                                                {student.id}
+                                                {enrollment.userId.split('-')[0].toUpperCase()}
                                             </code>
-                                        </TableCell>
-                                        <TableCell>
-                                            <span className="text-sm font-semibold text-slate-600">{student.grade}</span>
-                                        </TableCell>
-                                        <TableCell>
-                                            <span className="text-sm  text-slate-800">{student.attendance}</span>
                                         </TableCell>
                                         <TableCell>
                                             <Badge className={cn(
                                                 "rounded-full px-2.5 py-0.2 text-[9px]  uppercase ",
-                                                student.status === "active"
-                                                    ? "bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-none hover:bg-transparent"
-                                                    : "bg-rose-100 text-rose-400 border border-rose-200 shadow-none hover:bg-transparent"
+                                                "bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-none hover:bg-transparent"
                                             )}>
-                                                {student.status}
+                                                Confirmed
                                             </Badge>
                                         </TableCell>
                                         <TableCell>
-                                            <span className="text-[11px] font-bold text-slate-500">{student.lastActive}</span>
+                                            <span className="text-[11px] font-bold text-slate-500">{new Date(enrollment.createdAt).toLocaleDateString()}</span>
                                         </TableCell>
                                         <TableCell>
                                             <DropdownMenu>

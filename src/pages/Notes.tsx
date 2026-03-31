@@ -9,6 +9,7 @@ import {
     ArrowRight,
     ExternalLink
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 const mockNotes = [
     {
@@ -46,145 +47,83 @@ const mockNotes = [
     },
 ];
 
-const subjectColors = {
+import { useNavigate } from "react-router-dom";
+
+const subjectColors: Record<string, any> = {
     Chemistry: { bg: "bg-emerald-50", accent: "bg-emerald-800", text: "text-emerald-800", border: "border-emerald-200", hover: "group-hover:bg-emerald-800" },
     History: { bg: "bg-amber-50", accent: "bg-amber-700", text: "text-amber-700", border: "border-amber-200", hover: "group-hover:bg-amber-700" },
     Physics: { bg: "bg-blue-50", accent: "bg-blue-800", text: "text-blue-800", border: "border-blue-200", hover: "group-hover:bg-blue-800" },
     English: { bg: "bg-rose-50", accent: "bg-rose-700", text: "text-rose-700", border: "border-rose-200", hover: "group-hover:bg-rose-700" },
+    "Lecture 1": { bg: "bg-emerald-50", accent: "bg-emerald-800", text: "text-emerald-800", border: "border-emerald-200", hover: "group-hover:bg-emerald-800" },
+    "Lecture 2": { bg: "bg-amber-50", accent: "bg-amber-700", text: "text-amber-700", border: "border-amber-200", hover: "group-hover:bg-amber-700" },
+    "Lecture 3": { bg: "bg-blue-50", accent: "bg-blue-800", text: "text-blue-800", border: "border-blue-200", hover: "group-hover:bg-blue-800" },
 };
 
 const Notes = () => {
-    const [selectedNote, setSelectedNote] = useState(null);
-    const [pdfLoaded, setPdfLoaded] = useState(false);
+    const navigate = useNavigate();
 
-    const handleSelectNote = (note) => {
-        setPdfLoaded(false);
-        setSelectedNote(note);
+    const handleSelectNote = (note: any) => {
+        navigate("/pdf-view", { state: { pdfUrl: note.pdfUrl, title: note.title } });
     };
 
-    const handleBack = () => {
-        setSelectedNote(null);
-        setPdfLoaded(false);
-    };
-
-    if (selectedNote) {
-        const colors = subjectColors[selectedNote.subject] || subjectColors.Chemistry;
-
-        return (
-            <div className="max-w-4xl mx-auto pb-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-
-
-                {/* Document Header */}
-                <div className="bg-white border border-border border-t-0 px-8 py-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex items-start gap-4">
-                        <div className={`h-12 w-12 ${colors.accent} flex items-center justify-center shrink-0 rounded-sm`}>
-                            <BookOpen className="h-6 w-6 text-white stroke-[1.5]" />
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className={`text-[9px] font-black  uppercase ${colors.text}`}>{selectedNote.subject}</span>
-                                <span className="text-slate-200">•</span>
-                                <span className="text-[9px] font-bold text-slate-400 uppercase ">{selectedNote.id}</span>
-                            </div>
-                            <h1 className="text-lg font-serif font-bold text-slate-900 leading-tight">{selectedNote.title}</h1>
-                            <div className="flex items-center gap-4 mt-2">
-                                <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase ">
-                                    <User className="h-3 w-3" />
-                                    {selectedNote.staff}
-                                </div>
-                                <span className="text-[10px] font-bold text-slate-300">{selectedNote.date}</span>
-                                <span className="text-[10px] font-bold text-slate-300">{selectedNote.size}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div>
-                        <Button
-                            variant="default"
-                            size="sm"
-                            onClick={handleBack}
-                            className={`hidden md:flex items-center gap-2 px-4 py-2 ${colors.bg} ${colors.border} border rounded text-[10px] font-black ${colors.text} shrink-0`}>
-                            <ChevronLeft className="h-3.5 w-3.5 mr-1" />
-                            Back to Notes List
-                        </Button>
-                    </div>
-                </div>
-
-                {/* PDF Viewer */}
-                <div className="relative border border-t-0 border-border rounded-b-none overflow-hidden bg-slate-200" style={{ height: "780px" }}>
-                    {!pdfLoaded && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-100 z-10">
-                            <div className="h-10 w-10 border-4 border-slate-300 border-t-slate-700 rounded-none animate-spin mb-4" />
-                            <p className="text-[11px] font-bold text-slate-500 uppercase ">Loading PDF...</p>
-                        </div>
-                    )}
-                    <iframe
-                        src={`${selectedNote.pdfUrl}#toolbar=1&navpanes=0&scrollbar=1`}
-                        className="w-full h-full"
-                        style={{ height: "780px" }}
-                        title={selectedNote.title}
-                        onLoad={() => setPdfLoaded(true)}
-                    />
-                </div>
-            </div>
-        );
-    }
-
-    // ── List view ──
     return (
-        <div className="max-w-4xl mx-auto py-4 px-4 animate-in fade-in duration-700">
-
-            <div className="flex items-center justify-between mb-12 pb-6">
+        <div className="max-w-4xl mx-auto py-8 px-4 animate-in fade-in duration-700">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-12 gap-4">
                 <div className="space-y-1">
-                    <h1 className="text-xl font-black  text-slate-900">Academic Resources</h1>
-                    <p className="text-slate-500 text-[12px] font-medium">Digital Library of Course Materials and Staff Notes</p>
+                    <h1 className="text-xl font-black text-slate-900 tracking-tight leading-none uppercase">Academic Resources</h1>
+                    <p className="text-slate-500 text-xs font-semibold uppercase  opacity-70">Digital Library of Course Materials</p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[10px] font-bold text-slate-400 uppercase ">System Online</span>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 gap-6">
                 {mockNotes.map((note) => {
                     const colors = subjectColors[note.subject] || subjectColors.Chemistry;
                     return (
                         <div
                             key={note.id}
                             onClick={() => handleSelectNote(note)}
-                            className="group flex flex-col md:flex-row items-stretch border-[0.5px] border-slate-200 bg-white hover:border-slate-400 hover:-translate-y-1 transition-all duration-200 cursor-pointer overflow-hidden rounded-none shadow-sm hover:shadow-md"
+                            className="group flex flex-col md:flex-row items-stretch border border-slate-200 bg-white hover:border-slate-300 transition-all duration-300 cursor-pointer overflow-hidden rounded shadow-none hover:shadow-xl"
                         >
-                            {/* Left accent block */}
-                            <div className={`w-full md:w-32 bg-slate-50 md:border-r border-slate-200 flex flex-col items-center justify-center p-4 transition-colors duration-200 ${colors.hover} group-hover:text-white`}>
-                                <span className="text-[10px] font-black er uppercase mb-1 opacity-60">REF-ID</span>
-                                <span className="text-xs font-black er font-mono">{note.id.split('-').pop()}</span>
-                            </div>
+                            {/* Accent Sidebar */}
+                            {/* <div className={`w-full md:w-2 bg-emerald-50 transition-all duration-300 ${colors.accent}`} /> */}
 
-                            <div className="flex-1 p-6 space-y-3">
+                            <div className="flex-1 p-6 space-y-4">
                                 <div className="flex items-center justify-between">
-                                    <span className={`text-[9px] font-black  uppercase ${colors.text}`}>{note.subject}</span>
-                                    <span className="text-[9px] font-bold text-slate-300 uppercase">{note.date}</span>
+                                    <Badge variant="outline" className={`text-[9px] font-black uppercase rounded-sm border-none ${colors.bg} ${colors.text}`}>
+                                        {note.subject}
+                                    </Badge>
+                                    <span className="text-[10px] font-bold text-slate-400 font-mono tracking-tighter">REF: {note.id}</span>
                                 </div>
 
-                                <h3 className="text-[17px] font-serif font-bold text-slate-900 leading-tight">
-                                    {note.title}
-                                </h3>
-
-                                <p className="text-[13px] text-slate-500 line-clamp-2 leading-relaxed font-medium">
-                                    {note.preview}
-                                </p>
-
-                                <div className="flex items-center gap-4 pt-2 border-t border-slate-50">
-                                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase ">
-                                        <User className="h-3 w-3" />
-                                        {note.staff}
-                                    </div>
-                                    <div className="flex mr-auto" />
-                                    <div className="flex items-center gap-1 text-[10px] font-bold text-slate-300 uppercase">
-                                        <FileText className="h-3 w-3" />
-                                        {note.type}
-                                    </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-900 leading-tight group-hover:text-primary transition-colors">
+                                        {note.title}
+                                    </h3>
+                                    <p className="text-[13px] text-slate-500 line-clamp-2 leading-relaxed mt-2">
+                                        {note.preview}
+                                    </p>
                                 </div>
-                            </div>
 
-                            {/* Arrow */}
-                            <div className="hidden md:flex items-center justify-center px-6 bg-slate-50/50 group-hover:bg-slate-50 transition-colors">
-                                <ArrowRight className="h-5 w-5 text-slate-300 group-hover:text-slate-600 transition-colors" />
+                                <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase">
+                                            <User className="h-3.5 w-3.5" />
+                                            {note.staff}
+                                        </div>
+                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-300 uppercase">
+                                            <FileText className="h-3.5 w-3.5" />
+                                            {note.size}
+                                        </div>
+                                    </div>
+                                    <Button variant="ghost" size="sm" className="h-8 px-3 rounded text-[10px] font-black uppercase  text-[#1e4e96] hover:bg-slate-50">
+                                        View Document
+                                        <ArrowRight className="h-3 w-3 ml-2" />
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     );
@@ -192,18 +131,21 @@ const Notes = () => {
             </div>
 
             {/* Footer */}
-            <div className="mt-12 flex items-center justify-between p-4 bg-slate-50">
-                <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center">
-                        <User className="h-4 w-4 text-slate-500" />
+            <div className="mt-16 border-t border-slate-200 flex flex-col md:flex-row items-center justify-between p-6">
+                <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded  flex items-center justify-center">
+                        <FileText className="h-5 w-5 text-slate-400" />
                     </div>
                     <div>
-                        <p className="text-[11px] font-black uppercase text-slate-900">Hussen</p>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase">HC-2409-001-DAY</p>
+                        <p className="text-[11px]   text-slate-900">Student Archive Access</p>
+                        <p className="text-[10px] font-bold text-slate-400 tracking-tighter">H-Class Learning Management v2.4.0</p>
                     </div>
                 </div>
-                <div className="text-right">
-                    <p className="text-[10px] text-slate-400">Document Archive System v2.0</p>
+                <div className="flex gap-4">
+                    <div className="text-right hidden md:block">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase">Last Updated</p>
+                        <p className="text-[11px] font-black text-slate-700">Today, 04:30 PM</p>
+                    </div>
                 </div>
             </div>
         </div>

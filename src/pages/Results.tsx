@@ -1,4 +1,11 @@
-import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -7,15 +14,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Home, ChevronRight, ChevronLeft, FileDown } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 
 interface ResultEntry {
   id: number;
@@ -56,9 +57,17 @@ const Results = () => {
           </SelectContent>
         </Select>
 
-        <Button className="bg-blue-800 w-60 hover:bg-blue-700  text-white px-12 h-10 rounded text-[12px] font-bold">
-          Export To PDF
-        </Button>
+        <Link to="/export-pdf">
+          <Button className="bg-blue-800 w-60 hover:bg-blue-700  text-white px-12 h-10 rounded text-[12px] font-bold">
+            Export To PDF
+          </Button>
+        </Link>
+
+        <Link to="/excel-view">
+          <Button variant="destructive" className="  bg-rose-800 hover:bg-rose-700 text-white px-12 h-10 rounded text-[12px] font-bold">
+            View Excel For Evaluation
+          </Button>
+        </Link>
       </div>
 
       {/* Legend and Summary Stats */}

@@ -1,0 +1,4 @@
+export const STREAM_API_KEY = 'mmhfdzb5evj2';
+export const STREAM_USER_ID = 'Best_Border';
+export const STREAM_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3Byb250by5nZXRzdHJlYW0uaW8iLCJzdWIiOiJ1c2VyL0Jlc3RfQm9yZGVyIiwidXNlcl9pZCI6IkJlc3RfQm9yZGVyIiwidmFsaWRpdHlfaW5fc2Vjb25kcyI6NjA0ODAwLCJpYXQiOjE3NzMxNzQwMjIsImV4cCI6MTc3Mzc3ODgyMn0.IrDRdS9FQBNqqjSV7OKM-q_yOwSFAlo-t8mgFYrPw-Y';
+export const STREAM_CALL_ID = 'V0eSQkieHd2JacSy0BQ8I';

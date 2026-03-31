@@ -8,10 +8,17 @@ import svgr from "vite-plugin-svgr";
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
-    port: 4000,
+    port: 3000,
     hmr: {
       overlay: false,
     },
+    proxy: {
+      '/api': {
+        target: 'https://h-class-server.onrender.com',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
   },
   plugins: [react(), svgr()],
   resolve: {

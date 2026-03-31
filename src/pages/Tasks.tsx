@@ -265,23 +265,6 @@ const Tasks = () => {
                   </div>
                 </>
               )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 border border-slate-100">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Opened on</p>
-                  <div className="flex items-center gap-2 text-[12px] font-bold text-slate-700">
-                    <Clock className="h-3.5 w-3.5" />
-                    {selectedTask.start.split(' at ')[0]}
-                  </div>
-                </div>
-                <div className="p-4 border border-slate-100 bg-slate-50/50">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Deadline</p>
-                  <div className="flex items-center gap-2 text-[12px] font-bold text-slate-900">
-                    <TicketsIcon className="h-3.5 w-3.5" />
-                    {selectedTask.end.split(' at ')[0]}
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* Modal footer */}

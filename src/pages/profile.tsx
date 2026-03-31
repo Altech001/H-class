@@ -1,195 +1,176 @@
-import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
-    User,
-    Mail,
-    Phone,
-    MapPin,
-    Calendar,
-    GraduationCap,
-    ShieldCheck,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import { useUsers } from "@/hooks/use-users";
+import { format } from "date-fns";
+import {
     Bell,
-    Settings,
-    Edit2,
+    Calendar,
     Camera,
-    ChevronRight
+    ChevronRight,
+    Edit2,
+    Loader2,
+    Mail,
+    Settings,
+    ShieldCheck,
 } from "lucide-react";
+import { toast } from "sonner";
 
 const ProfilePage = () => {
-    const user = {
-        name: "Hussen JD",
-        email: "hussen.jd@example.com",
-        phone: "+254 700 000 000",
-        location: "Nairobi, Kenya",
-        joinDate: "March 2024",
-        grade: "Grade 12",
-        studentId: "STU-2024-001",
-        avatar: "/icons/photos.png",
+    const { useGetProfile, updateProfile } = useUsers();
+    const { data: profile, isLoading, error } = useGetProfile();
+    const [isEditing, setIsEditing] = useState(false);
+
+    if (isLoading) {
+        return (
+            <div className="flex h-[80vh] w-full items-center justify-center">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+        );
+    }
+
+    if (error || !profile) {
+        return (
+            <div className="flex h-[80vh] w-full items-center justify-center text-sm text-muted-foreground">
+                Failed to load profile. Please try again.
+            </div>
+        );
+    }
+
+    const initials = `${profile.firstName?.[0] || ""}${profile.lastName?.[0] || ""}`.toUpperCase();
+
+    const userProfile = {
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        name: `${profile.firstName} ${profile.lastName}`,
+        email: profile.email,
+        location: profile.location || "Not provided",
+        joinDate: format(new Date(profile.createdAt), "MMMM yyyy"),
+        grade: profile.grade || "Grade Student",
+        studentId: profile.customStudentId || profile.id.slice(0, 8).toUpperCase(),
+        avatar: profile.avatarUrl || "/icons/photos.png",
+        bio: profile.bio || "No biography provided.",
+    };
+
+    const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+        const data = {
+            firstName: formData.get("firstName") as string,
+            lastName: formData.get("lastName") as string,
+            location: formData.get("location") as string,
+            bio: formData.get("bio") as string,
+            grade: formData.get("grade") as string,
+        };
+        try {
+            await updateProfile(data);
+            toast.success("Profile updated");
+            setIsEditing(false);
+        } catch {
+            toast.error("Failed to update profile");
+        }
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-700 pb-1">
-            {/* Profile Header Card */}
-            <Card className="border-none shadow-none overflow-hidden rounded-none bg-transparent">
-                <div className="h-20 w-full bg-transparent" />
-                <CardContent className="relative px-6 pb-2 mt-[-48px]">
-                    <div className="flex flex-col sm:flex-row items-end gap-4 sm:gap-6">
-                        <div className="relative group">
-                            <Avatar className="h-20 w-20 border-4 border-transparent shadow-none rounded-none overflow-hidden bg-transparent">
-                                <AvatarImage src={user.avatar} className="object-contain p-2" />
-                                <AvatarFallback className="rounded-none bg-transparent text-primary-foreground text-2xl font-bold">
-                                    JD
-                                </AvatarFallback>
-                            </Avatar>
-                            <button className="absolute bottom-0 right-0 p-1.5 text-white rounded-none shadow-lg bg-primary/90 transition-all opacity-100">
-                                <Camera className="h-3.5 w-3.5" />
-                            </button>
-                        </div>
+        <div className="max-w-xl mx-auto py-8 px-5 space-y-8">
 
-                        <div className="flex-1 pt-1">
-                            <div className="flex items-center justify-between gap-4">
-                                <div>
-
-                                </div>
-                                <Button variant="outline" className="rounded-none gap-2 border-none bg-transparent hover:bg-transparent">
-                                    <Edit2 className="h-8 w-8 text-primary" />
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Contact Information */}
-                <div className="md:col-span-1 space-y-6">
-                    <Card className="border-none shadow-none rounded-none bg-transparent">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-bold  tracking-wider text-muted-foreground/70">Contact Info</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex items-center gap-3 text-sm">
-                                <div className="h-8 w-8  flex items-center justify-center shrink-0">
-                                    <Mail className="h-4 w-4 text-primary" />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-[11px] font-bold text-muted-foreground  ">Email</p>
-                                    <p className="font-medium text-foreground truncate">{user.email}</p>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-3 text-sm">
-                                <div className="h-8 w-8  flex items-center justify-center shrink-0">
-                                    <Phone className="h-4 w-4 text-primary" />
-                                </div>
-                                <div>
-                                    <p className="text-[11px] font-bold text-muted-foreground  ">Phone</p>
-                                    <p className="font-medium text-foreground">{user.phone}</p>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-3 text-sm">
-                                <div className="h-8 w-8  flex items-center justify-center shrink-0">
-                                    <MapPin className="h-4 w-4 text-primary" />
-                                </div>
-                                <div>
-                                    <p className="text-[11px] font-bold text-muted-foreground  ">Location</p>
-                                    <p className="font-medium text-foreground">{user.location}</p>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-3 text-sm">
-                                <div className="h-8 w-8  flex items-center justify-center shrink-0">
-                                    <Calendar className="h-4 w-4 text-primary" />
-                                </div>
-                                <div>
-                                    <p className="text-[11px] font-bold text-muted-foreground  ">Joined</p>
-                                    <p className="font-medium text-foreground">{user.joinDate}</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="border-none shadow-none rounded-none bg-transparent">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-bold  tracking-wider text-foreground">Student Status</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex items-center justify-between p-3 bg-muted/30 rounded-none border-l-4 border-success">
-                                <div className="flex items-center gap-3">
-                                    <ShieldCheck className="h-5 w-5 text-success" />
-                                    <div>
-                                        <p className="text-xs font-bold text-foreground ">Verified Student</p>
-                                        <p className="text-[10px] text-muted-foreground">ID: {user.studentId}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+            {/* Header */}
+            <div className="flex items-center gap-4">
+                <div className="relative">
+                    <Avatar className="h-16 w-16 rounded-full">
+                        <AvatarImage src={userProfile.avatar} className="object-cover" />
+                        <AvatarFallback className="bg-blue-50 text-blue-600 text-base font-medium">
+                            {initials}
+                        </AvatarFallback>
+                    </Avatar>
+                    <button className="absolute bottom-0 right-0 h-5 w-5 rounded-full bg-white border border-border flex items-center justify-center shadow-sm">
+                        <Camera className="h-2.5 w-2.5 text-muted-foreground" />
+                    </button>
                 </div>
 
-                {/* Account Settings & Quick Links */}
-                <div className="md:col-span-2 space-y-6">
-                    <Card className="border-none shadow-sm rounded-none bg-white">
-                        <CardHeader className="pb-3 border-b border-border/40">
-                            <CardTitle className="text-base font-bold text-foreground">Account & Security</CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-0">
-                            <div className="divide-y divide-border/40">
-                                <button className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
-                                    <div className="flex items-center gap-4">
-                                        <div className="h-9 w-9  flex items-center justify-center text-primary   transition-all">
-                                            <Bell className="h-4 w-4" />
-                                        </div>
-                                        <div className="text-left">
-                                            <p className="text-sm font-bold text-foreground">Notification Settings</p>
-                                            <p className="text-xs text-muted-foreground">Manage your alerts and summaries</p>
-                                        </div>
-                                    </div>
-                                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                                </button>
+                <div className="flex-1 min-w-0">
+                    <p className="text-lg font-medium text-foreground leading-tight truncate">{userProfile.name}</p>
+                    <p className="text-sm text-muted-foreground">{userProfile.grade}</p>
+                </div>
 
-                                <button className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
-                                    <div className="flex items-center gap-4">
-                                        <div className="h-9 w-9  flex items-center justify-center text-primary   transition-all">
-                                            <ShieldCheck className="h-4 w-4" />
-                                        </div>
-                                        <div className="text-left">
-                                            <p className="text-sm font-bold text-foreground">Privacy & Security</p>
-                                            <p className="text-xs text-muted-foreground">Password and account access</p>
-                                        </div>
+                <Dialog open={isEditing} onOpenChange={setIsEditing}>
+                    <DialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground">
+                            <Edit2 className="h-4 w-4" />
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[480px] rounded-xl">
+                        <form onSubmit={handleUpdateProfile}>
+                            <DialogHeader>
+                                <DialogTitle className="font-medium">Edit profile</DialogTitle>
+                                <DialogDescription className="text-sm">
+                                    Update your personal information.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-3 py-4">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="firstName" className="text-xs text-muted-foreground">First name</Label>
+                                        <Input id="firstName" name="firstName" defaultValue={userProfile.firstName} className="h-9 rounded text-sm" />
                                     </div>
-                                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                                </button>
-
-                                <button className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
-                                    <div className="flex items-center gap-4">
-                                        <div className="h-9 w-9  flex items-center justify-center text-primary   transition-all">
-                                            <Settings className="h-4 w-4" />
-                                        </div>
-                                        <div className="text-left">
-                                            <p className="text-sm font-bold text-foreground">Global Display Preferences</p>
-                                            <p className="text-xs text-muted-foreground">Language, theme, and time zone</p>
-                                        </div>
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="lastName" className="text-xs text-muted-foreground">Last name</Label>
+                                        <Input id="lastName" name="lastName" defaultValue={userProfile.lastName} className="h-9 rounded text-sm" />
                                     </div>
-                                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                                </button>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="bio" className="text-xs text-muted-foreground">About</Label>
+                                    <textarea
+                                        id="bio"
+                                        name="bio"
+                                        defaultValue={userProfile.bio === "No biography provided." ? "" : userProfile.bio}
+                                        className="w-full min-h-[80px] p-2.5 text-sm rounded border border-input bg-background resize-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                    />
+                                </div>
                             </div>
-                        </CardContent>
-                    </Card>
+                            <DialogFooter>
+                                <Button type="submit" className="rounded h-9 text-sm px-5">Save changes</Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+            </div>
 
-                    <Card className="border-none shadow-sm rounded-none bg-white">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-base font-bold text-foreground">About Me</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                                Aspiring software engineer and dedicated Grade 12 student. Passionate about learning new technologies and maintaining a disciplined study routine. "Always Keep small notes and writings" is the personal motto I live by.
-                            </p>
-                        </CardContent>
-                    </Card>
+            {/* Contact */}
+            <div>
+                <p className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground mb-2">Contact</p>
+                <div className="divide-y divide-border/50">
+                    {[
+                        { icon: <Mail className="h-3.5 w-3.5" />, label: "Email", value: userProfile.email },
+                        { icon: <Calendar className="h-3.5 w-3.5" />, label: "Joined", value: userProfile.joinDate },
+                    ].map(({ icon, label, value }) => (
+                        <div key={label} className="flex items-center gap-3 py-3">
+                            <span className="text-muted-foreground">{icon}</span>
+                            <span className="text-xs text-muted-foreground w-12 shrink-0">{label}</span>
+                            <span className="text-sm text-foreground truncate">{value}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Student status */}
+            <div>
+                <p className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground mb-2">Status</p>
+                <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 rounded px-3 py-2">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    <span className="text-sm font-medium">Verified student</span>
+                    <span className="text-xs text-emerald-500 font-mono">· {userProfile.studentId}</span>
                 </div>
             </div>
         </div>
