@@ -26,8 +26,8 @@ export default function Signup() {
 
         try {
             await register({ firstName, lastName, email, password });
-            toast.success("Account created successfully! Please log in.");
-            navigate("/login");
+            toast.success("Please check your email for a verification code");
+            navigate("/verify-email", { state: { email } });
         } catch (error: any) {
             console.error("Signup Error:", error);
             const errData = error?.response?.data?.error;

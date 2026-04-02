@@ -33,6 +33,11 @@ import Login from "./pages/auth/Login";
 import Signup from "./pages/auth/Signup";
 import Onboard from "./pages/onboards";
 import Members from "./pages/settings/members";
+
+import VerifyEmail from "./pages/auth/VerifyEmail";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -71,8 +76,15 @@ const App = () => (
             <Route path="/live-full" element={<LiveFullPage />} />
             <Route path="/onboard" element={<Onboard />} />
           </Route>
+          
+          <Route element={<ProtectedRoute requireVerified={false} />}>
+            <Route path="/verify-email" element={<VerifyEmail />} />
+          </Route>
+
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
