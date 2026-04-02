@@ -231,11 +231,15 @@ export function AppSidebar() {
           to="/profile"
           className={collapsed ? "flex items-center justify-center rounded-none px-0 py-2 transition-colors hover:bg-muted/50" : "flex items-center gap-3 rounded-none px-2 py-2 transition-colors hover:bg-muted/50"}
         >
-          <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/70 shadow-sm">
-            <span className="text-sm font-bold text-primary-foreground">
-              {user?.firstName?.[0]}{user?.lastName?.[0]}
-            </span>
-            <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background bg-success" />
+          <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/70 shadow-sm overflow-hidden border border-border">
+            {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+            ) : (
+                <span className="text-sm font-bold text-primary-foreground">
+                  {user?.firstName?.[0]}{user?.lastName?.[0]}
+                </span>
+            )}
+            <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background bg-success z-10" />
           </div>
           {!collapsed && (
             <>

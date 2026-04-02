@@ -15,11 +15,15 @@ export const useAuth = () => {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginDto) => {
-      const response = await apiClient.post<LoginResponse>("/auth/login", credentials);
+      const response = await apiClient.post<any>("/auth/login", credentials);
       return response.data;
     },
     onSuccess: (data) => {
-      setAuth(data.user);
+      // The backend uses sendSuccess(res, { user }), so axios data is { success: true, data: { user } }
+      const userPayload = data?.data?.user || data?.user;
+      if (userPayload) {
+          setAuth(userPayload);
+      }
       // Invalidate queries dependent on auth state
       queryClient.invalidateQueries();
     },

@@ -31,7 +31,10 @@ export default function VerifyEmail() {
         // update stored user data locally and navigate
         useAuthStore.getState().setUser({ ...user, emailVerified: true });
         toast({ title: "Success", description: "Email verified successfully!" });
-        const from = location.state?.from?.pathname || "/";
+        let from = location.state?.from?.pathname || "/";
+        if (["/verify-email", "/login", "/signup", "/forgot-password", "/reset-password"].includes(from)) {
+            from = "/";
+        }
         navigate(from, { replace: true });
       } else {
         toast({ title: "Success", description: "Email verified successfully! Please log in." });

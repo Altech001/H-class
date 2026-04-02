@@ -37,6 +37,8 @@ import Members from "./pages/settings/members";
 import VerifyEmail from "./pages/auth/VerifyEmail";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
+import CourseCatalog from "./pages/cousres/CourseCatalog";
+import CourseDetail from "./pages/cousres/CourseDetail";
 
 const queryClient = new QueryClient();
 
@@ -60,9 +62,13 @@ const App = () => (
               <Route path="/payments" element={<Payments />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/profile" element={<Profile />} />
-              <Route path="/courses" element={<MyCourses />} />
+              {/* Course routes: /courses = catalog, /courses/:id = detail, /my-courses = role dashboard */}
+              <Route path="/courses" element={<CourseCatalog />} />
+              <Route path="/courses/:id" element={<CourseDetail />} />
+              <Route path="/my-courses" element={<MyCourses />} />
               <Route path="/enroll/:id" element={<Enrollment />} />
               <Route path="/create-course" element={<CreateCourse />} />
+              {/* Staff / Admin */}
               <Route path="/allstudents" element={<Students />} />
               <Route path="/tresults" element={<TasksResults />} />
               <Route path="/classnotes" element={<ClassNotesPage />} />

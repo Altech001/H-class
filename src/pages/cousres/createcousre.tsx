@@ -26,8 +26,9 @@ import { cn } from "@/lib/utils";
 
 const CreateCourse = () => {
     const navigate = useNavigate();
-    const { createCourse } = useCourses();
+    const { createCourse, publishCourse } = useCourses();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isPublishing, setIsPublishing] = useState(false);
 
     const [formData, setFormData] = useState({
         title: "",
@@ -41,9 +42,7 @@ const CreateCourse = () => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
+    const handleCreate = async (shouldPublish: boolean) => {
         if (!formData.title || !formData.description || !formData.price) {
             toast.error("Please fill in all required fields");
             return;
@@ -59,9 +58,13 @@ const CreateCourse = () => {
             return;
         }
 
-        setIsSubmitting(true);
+        if (shouldPublish) {
+            setIsPublishing(true);
+        } else {
+            setIsSubmitting(true);
+        }
+
         try {
-            // Clean values and ensure correct types for backend validation
             const payload = {
                 title: formData.title.trim(),
                 description: formData.description.trim(),
@@ -69,12 +72,20 @@ const CreateCourse = () => {
                 passMark: parseInt(formData.passMark) || 50,
             };
 
-            await createCourse(payload);
-            toast.success("Course created successfully!");
+            const courseResult = await createCourse(payload);
+            const courseId = courseResult?.data?.id || courseResult?.id; // Assuming response format
+            
+            if (shouldPublish && courseId) {
+                await publishCourse(courseId);
+                toast.success("Course published successfully!");
+            } else {
+                toast.success("Course saved as Draft!");
+            }
+            
             navigate("/courses");
         } catch (error: any) {
             const errorData = error.response?.data?.error;
-            let errorMessage = errorData?.message || "Failed to create course";
+            let errorMessage = errorData?.message || "Failed to process course";
 
             if (errorData?.details) {
                 const details = Object.entries(errorData.details)
@@ -86,6 +97,7 @@ const CreateCourse = () => {
             toast.error(errorMessage);
         } finally {
             setIsSubmitting(false);
+            setIsPublishing(false);
         }
     };
 
@@ -111,7 +123,6 @@ const CreateCourse = () => {
                 <div className="lg:col-span-2 space-y-1">
                     <Card className="border-none shadow-none bg-transparent">
                         <CardHeader className="px-0 pt-0">
-
                             <CardTitle className="text-xl  text-slate-800">General Information</CardTitle>
                         </CardHeader>
                         <CardContent className="px-0 space-y-6">
@@ -217,11 +228,11 @@ const CreateCourse = () => {
 
                             <div className="pt-4 space-y-3">
                                 <Button
-                                    onClick={handleSubmit}
-                                    disabled={isSubmitting}
+                                    onClick={() => handleCreate(true)}
+                                    disabled={isSubmitting || isPublishing}
                                     className="w-full h-12 rounded bg-red-800 hover:bg-black text-white font-bold uppercase text-[12px] transition-all active:scale-95"
                                 >
-                                    {isSubmitting ? (
+                                    {isPublishing ? (
                                         <Loader2 className="w-4 h-4 animate-spin mr-2" />
                                     ) : (
                                         <Save className="w-4 h-4 mr-2" />
@@ -230,9 +241,13 @@ const CreateCourse = () => {
                                 </Button>
                                 <Button
                                     variant="outline"
-                                    onClick={() => navigate("/courses")}
+                                    onClick={() => handleCreate(false)}
+                                    disabled={isSubmitting || isPublishing}
                                     className="w-full h-12 rounded border-slate-200 text-slate-600 font-bold uppercase text-[11px]"
                                 >
+                                    {isSubmitting ? (
+                                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                    ) : null}
                                     Save as Draft
                                 </Button>
                             </div>

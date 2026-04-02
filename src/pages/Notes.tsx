@@ -1,152 +1,462 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { useNotes } from "@/hooks/use-notes";
+import { useCourses } from "@/hooks/use-courses";
+import { useAuthStore } from "@/store/auth-store";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
     FileText,
-    User,
-    ChevronLeft,
     Download,
+    Upload,
+    Loader2,
     BookOpen,
-    ArrowRight,
-    ExternalLink
+    Search,
+    Plus,
+    ChevronDown,
+    Eye,
+    Trash2,
+    MoreHorizontal,
+    RefreshCw,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-
-const mockNotes = [
-    {
-        id: "NOTE-2409-01",
-        title: "Organic Chemistry: Carbonyl Compounds & Mechanisms",
-        preview: "Comprehensive study of nucleophilic addition reactions to the carbonyl group. Includes Grignard reagents, acetal formation, and cyanohydrin synthesis with detailed step-by-step mechanism diagrams.",
-        subject: "Lecture 1",
-        staff: "Dr. Robert Smith",
-        date: "March 07, 2026",
-        size: "1.2 MB",
-        type: "PDF Document",
-        pdfUrl: "https://ontheline.trincoll.edu/images/bookdown/sample-local-pdf.pdf"
-    },
-    {
-        id: "NOTE-2409-02",
-        title: "Modern European History: Origins of the Great War",
-        preview: "Analysis of the long-term and immediate causes of WWI. Examining the alliance systems, naval rivalry between Britain and Germany, and the Balkan crisis leading to the 1914 assassination.",
-        subject: "Lecture 2",
-        staff: "Prof. Sarah Johnson",
-        date: "March 06, 2026",
-        size: "0.8 MB",
-        type: "PDF Document",
-        pdfUrl: "https://www.rd.usda.gov/sites/default/files/pdf-sample_0.pdf"
-    },
-    {
-        id: "NOTE-2409-03",
-        title: "Quantum Mechanics: The Schrödinger Equation",
-        preview: "Detailed derivation and interpretation of the time-dependent Schrödinger equation. Discussion on wave functions, probability density, and the physical constraints on valid solutions.",
-        subject: "Lecture 3",
-        staff: "Dr. James Miller",
-        date: "March 05, 2026",
-        size: "2.5 MB",
-        type: "PDF Document",
-        pdfUrl: "https://www.rd.usda.gov/sites/default/files/pdf-sample_0.pdf"
-    },
-];
-
-import { useNavigate } from "react-router-dom";
-
-const subjectColors: Record<string, any> = {
-    Chemistry: { bg: "bg-emerald-50", accent: "bg-emerald-800", text: "text-emerald-800", border: "border-emerald-200", hover: "group-hover:bg-emerald-800" },
-    History: { bg: "bg-amber-50", accent: "bg-amber-700", text: "text-amber-700", border: "border-amber-200", hover: "group-hover:bg-amber-700" },
-    Physics: { bg: "bg-blue-50", accent: "bg-blue-800", text: "text-blue-800", border: "border-blue-200", hover: "group-hover:bg-blue-800" },
-    English: { bg: "bg-rose-50", accent: "bg-rose-700", text: "text-rose-700", border: "border-rose-200", hover: "group-hover:bg-rose-700" },
-    "Lecture 1": { bg: "bg-emerald-50", accent: "bg-emerald-800", text: "text-emerald-800", border: "border-emerald-200", hover: "group-hover:bg-emerald-800" },
-    "Lecture 2": { bg: "bg-amber-50", accent: "bg-amber-700", text: "text-amber-700", border: "border-amber-200", hover: "group-hover:bg-amber-700" },
-    "Lecture 3": { bg: "bg-blue-50", accent: "bg-blue-800", text: "text-blue-800", border: "border-blue-200", hover: "group-hover:bg-blue-800" },
-};
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 const Notes = () => {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const user = useAuthStore((s) => s.user);
+    const isTutor = user?.role?.toUpperCase() === "TUTOR";
+    const isStudent = user?.role?.toUpperCase() === "STUDENT";
 
-    const handleSelectNote = (note: any) => {
-        navigate("/pdf-view", { state: { pdfUrl: note.pdfUrl, title: note.title } });
+    const { useGetCourses, useGetMyEnrollments } = useCourses();
+    const { useGetNotesByCourse, getNoteDownloadUrl, getUploadUrl, createNote, isGettingDownloadUrl, isCreatingNote, isGettingUploadUrl } = useNotes();
+
+    // Fetch relevant courses
+    const { data: tutorCoursesData } = useGetCourses(isTutor ? { tutorId: user?.id } : undefined);
+    const { data: enrollmentsData } = useGetMyEnrollments();
+    const { data: allCoursesData } = useGetCourses(isStudent ? { status: "PUBLISHED" } : undefined);
+
+    const tutorCourses = tutorCoursesData?.data || [];
+    const enrollments = enrollmentsData?.data || [];
+    const allCourses = allCoursesData?.data || [];
+    const enrolledCourses = allCourses.filter((c: any) => enrollments.some((e: any) => e.courseId === c.id));
+
+    // Available courses for context selection per role
+    const availableCourses = isTutor ? tutorCourses : enrolledCourses;
+
+    // Derive selected course from URL param
+    const urlCourseId = searchParams.get("courseId") || "";
+    const [selectedCourseId, setSelectedCourseId] = useState(urlCourseId);
+
+    useEffect(() => {
+        if (urlCourseId && urlCourseId !== selectedCourseId) {
+            setSelectedCourseId(urlCourseId);
+        }
+    }, [urlCourseId]);
+
+    const handleCourseChange = (val: string) => {
+        setSelectedCourseId(val);
+        setSearchParams(val ? { courseId: val } : {});
     };
 
+    // Notes query
+    const { data: notes, isLoading: loadingNotes, refetch: refetchNotes } = useGetNotesByCourse(selectedCourseId);
+
+    // Upload state
+    const [showUploadForm, setShowUploadForm] = useState(false);
+    const [uploadTitle, setUploadTitle] = useState("");
+    const [uploadFile, setUploadFile] = useState<File | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [search, setSearch] = useState("");
+
+    const handleUpload = async () => {
+        if (!selectedCourseId || !uploadTitle.trim() || !uploadFile) {
+            toast.error("Please fill in the title and select a file.");
+            return;
+        }
+        setIsUploading(true);
+        try {
+            // 1. Get pre-signed S3 URL
+            const { uploadUrl, s3Key } = await getUploadUrl({
+                courseId: selectedCourseId,
+                contentType: uploadFile.type || "application/octet-stream",
+                fileName: uploadFile.name,
+            });
+
+            // 2. PUT file directly to S3
+            const uploadRes = await fetch(uploadUrl, {
+                method: "PUT",
+                body: uploadFile,
+                headers: { "Content-Type": uploadFile.type || "application/octet-stream" },
+            });
+            if (!uploadRes.ok) throw new Error("S3 upload failed");
+
+            // 3. Create note record
+            await createNote({ courseId: selectedCourseId, title: uploadTitle.trim(), s3Key });
+
+            toast.success("Note uploaded successfully!");
+            setUploadTitle("");
+            setUploadFile(null);
+            setShowUploadForm(false);
+            refetchNotes();
+        } catch (err: any) {
+            console.error(err);
+            toast.error(err?.message || "Upload failed. Please try again.");
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    const handleDownload = async (note: any) => {
+        try {
+            const url = await getNoteDownloadUrl(note.id);
+            if (url) window.open(url, "_blank");
+        } catch {
+            toast.error("Failed to get download link.");
+        }
+    };
+
+    const handlePreview = async (note: any) => {
+        try {
+            const url = await getNoteDownloadUrl(note.id);
+            if (url) navigate("/pdf-view", { state: { pdfUrl: url, title: note.title } });
+        } catch {
+            toast.error("Failed to preview note.");
+        }
+    };
+
+    const filteredNotes = (notes || []).filter((n: any) =>
+        n.title.toLowerCase().includes(search.toLowerCase())
+    );
+
+    const selectedCourse = availableCourses.find((c: any) => c.id === selectedCourseId);
+
     return (
-        <div className="max-w-4xl mx-auto py-8 px-4 animate-in fade-in duration-700">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-12 gap-4">
-                <div className="space-y-1">
-                    <h1 className="text-xl font-black text-slate-900 tracking-tight leading-none uppercase">Academic Resources</h1>
-                    <p className="text-slate-500 text-xs font-semibold uppercase  opacity-70">Digital Library of Course Materials</p>
+        <div className="max-w-5xl mx-auto py-8 px-4 space-y-6 animate-in fade-in duration-500">
+            {/* ── Header ── */}
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">
+                        {isTutor ? "Course Notes" : "My Notes"}
+                    </h1>
+                    <p className="text-sm text-slate-500 mt-1">
+                        {isTutor
+                            ? "Upload and manage notes for your courses."
+                            : "Access notes from your enrolled courses."}
+                    </p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[10px] font-bold text-slate-400 uppercase ">System Online</span>
-                </div>
+                {isTutor && selectedCourseId && (
+                    <Button
+                        onClick={() => setShowUploadForm((v) => !v)}
+                        className="bg-red-800 hover:bg-black text-white font-bold uppercase text-xs h-10 px-5 gap-2 shadow-lg shadow-red-900/20 active:scale-95 transition-all shrink-0"
+                    >
+                        {showUploadForm ? (
+                            <>
+                                <ChevronDown className="w-4 h-4" />
+                                Cancel Upload
+                            </>
+                        ) : (
+                            <>
+                                <Upload className="w-4 h-4" />
+                                Upload Note
+                            </>
+                        )}
+                    </Button>
+                )}
             </div>
 
-            <div className="grid grid-cols-1 gap-6">
-                {mockNotes.map((note) => {
-                    const colors = subjectColors[note.subject] || subjectColors.Chemistry;
-                    return (
-                        <div
-                            key={note.id}
-                            onClick={() => handleSelectNote(note)}
-                            className="group flex flex-col md:flex-row items-stretch border border-slate-200 bg-white hover:border-slate-300 transition-all duration-300 cursor-pointer overflow-hidden rounded shadow-none hover:shadow-xl"
+            {/* ── Course Selector ── */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    Select Course
+                </p>
+                {availableCourses.length === 0 ? (
+                    <div className="flex items-center gap-3 text-sm text-slate-400">
+                        <BookOpen className="w-4 h-4" />
+                        <span>
+                            {isTutor
+                                ? "You haven't created any courses yet."
+                                : "You haven't enrolled in any courses yet."}
+                        </span>
+                        <Button
+                            size="sm"
+                            variant="link"
+                            className="text-red-800 h-auto p-0 text-xs font-bold"
+                            onClick={() => navigate(isTutor ? "/create-course" : "/courses")}
                         >
-                            {/* Accent Sidebar */}
-                            {/* <div className={`w-full md:w-2 bg-emerald-50 transition-all duration-300 ${colors.accent}`} /> */}
-
-                            <div className="flex-1 p-6 space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <Badge variant="outline" className={`text-[9px] font-black uppercase rounded-sm border-none ${colors.bg} ${colors.text}`}>
-                                        {note.subject}
-                                    </Badge>
-                                    <span className="text-[10px] font-bold text-slate-400 font-mono tracking-tighter">REF: {note.id}</span>
-                                </div>
-
-                                <div>
-                                    <h3 className="text-lg font-bold text-slate-900 leading-tight group-hover:text-primary transition-colors">
-                                        {note.title}
-                                    </h3>
-                                    <p className="text-[13px] text-slate-500 line-clamp-2 leading-relaxed mt-2">
-                                        {note.preview}
-                                    </p>
-                                </div>
-
-                                <div className="flex items-center justify-between pt-4 border-t border-slate-50">
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase">
-                                            <User className="h-3.5 w-3.5" />
-                                            {note.staff}
-                                        </div>
-                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-300 uppercase">
-                                            <FileText className="h-3.5 w-3.5" />
-                                            {note.size}
-                                        </div>
-                                    </div>
-                                    <Button variant="ghost" size="sm" className="h-8 px-3 rounded text-[10px] font-black uppercase  text-[#1e4e96] hover:bg-slate-50">
-                                        View Document
-                                        <ArrowRight className="h-3 w-3 ml-2" />
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                    );
-                })}
+                            {isTutor ? "Create one →" : "Browse courses →"}
+                        </Button>
+                    </div>
+                ) : (
+                    <Select value={selectedCourseId} onValueChange={handleCourseChange}>
+                        <SelectTrigger className="w-full md:w-[360px] bg-white border-slate-200 text-sm font-semibold">
+                            <SelectValue placeholder="Choose a course to view notes..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {availableCourses.map((c: any) => (
+                                <SelectItem key={c.id} value={c.id} className="text-sm font-medium">
+                                    {c.title}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                )}
             </div>
 
-            {/* Footer */}
-            <div className="mt-16 border-t border-slate-200 flex flex-col md:flex-row items-center justify-between p-6">
-                <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded  flex items-center justify-center">
-                        <FileText className="h-5 w-5 text-slate-400" />
+            {/* ── Upload Form (Tutor only) ── */}
+            {isTutor && showUploadForm && selectedCourseId && (
+                <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-sm animate-in slide-in-from-top-2 duration-300">
+                    <h3 className="text-sm font-black text-slate-900 uppercase flex items-center gap-2">
+                        <Upload className="w-4 h-4 text-red-800" />
+                        Upload New Note
+                        {selectedCourse && (
+                            <span className="text-slate-400 font-semibold normal-case text-xs ml-1">
+                                → {selectedCourse.title}
+                            </span>
+                        )}
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase">Note Title *</label>
+                            <Input
+                                placeholder="e.g. Lecture 1: Introduction to React"
+                                value={uploadTitle}
+                                onChange={(e) => setUploadTitle(e.target.value)}
+                                className="h-10 border-slate-200 text-sm"
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase">File *</label>
+                            <Input
+                                type="file"
+                                accept=".pdf,.doc,.docx,.ppt,.pptx"
+                                onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                                className="h-10 border-slate-200 text-sm cursor-pointer"
+                            />
+                        </div>
                     </div>
-                    <div>
-                        <p className="text-[11px]   text-slate-900">Student Archive Access</p>
-                        <p className="text-[10px] font-bold text-slate-400 tracking-tighter">H-Class Learning Management v2.4.0</p>
+                    {uploadFile && (
+                        <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 px-3 py-2 rounded-lg">
+                            <FileText className="w-3.5 h-3.5 text-blue-600" />
+                            <span className="font-medium truncate">{uploadFile.name}</span>
+                            <span className="text-slate-400 shrink-0">
+                                ({(uploadFile.size / 1024).toFixed(0)} KB)
+                            </span>
+                        </div>
+                    )}
+                    <div className="flex items-center gap-3">
+                        <Button
+                            onClick={handleUpload}
+                            disabled={isUploading || !uploadFile || !uploadTitle.trim()}
+                            className="bg-slate-900 hover:bg-slate-800 text-white font-bold uppercase text-xs h-9 px-5 gap-2"
+                        >
+                            {isUploading ? (
+                                <>
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    Uploading...
+                                </>
+                            ) : (
+                                <>
+                                    <Upload className="w-3.5 h-3.5" />
+                                    Upload
+                                </>
+                            )}
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => { setShowUploadForm(false); setUploadFile(null); setUploadTitle(""); }}
+                            className="text-xs text-slate-400 hover:text-slate-700 font-bold uppercase"
+                        >
+                            Cancel
+                        </Button>
                     </div>
                 </div>
-                <div className="flex gap-4">
-                    <div className="text-right hidden md:block">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase">Last Updated</p>
-                        <p className="text-[11px] font-black text-slate-700">Today, 04:30 PM</p>
-                    </div>
+            )}
+
+            {/* ── Notes List ── */}
+            {!selectedCourseId ? (
+                <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-slate-200 rounded-xl gap-3">
+                    <FileText className="w-10 h-10 text-slate-300" />
+                    <p className="text-sm font-bold text-slate-500 uppercase">
+                        Select a course to view notes
+                    </p>
                 </div>
+            ) : (
+                <div className="space-y-4">
+                    {/* Search + Count */}
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                        <div className="relative flex-1 max-w-xs">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                            <Input
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder="Search notes..."
+                                className="pl-8 h-9 text-sm border-slate-200"
+                            />
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <span className="text-[11px] font-bold text-slate-400 uppercase">
+                                {filteredNotes.length} note{filteredNotes.length !== 1 ? "s" : ""}
+                            </span>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-slate-400"
+                                onClick={() => refetchNotes()}
+                            >
+                                <RefreshCw className="w-3.5 h-3.5" />
+                            </Button>
+                        </div>
+                    </div>
+
+                    {loadingNotes ? (
+                        <div className="flex items-center justify-center py-20">
+                            <Loader2 className="w-7 h-7 animate-spin text-red-800" />
+                        </div>
+                    ) : filteredNotes.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-slate-200 rounded-xl gap-3">
+                            <FileText className="w-10 h-10 text-slate-300" />
+                            <div className="text-center">
+                                <p className="text-sm font-bold text-slate-500 uppercase">
+                                    {search ? "No matching notes" : "No notes yet"}
+                                </p>
+                                <p className="text-xs text-slate-400 mt-1">
+                                    {isTutor && !search
+                                        ? "Upload the first note for this course."
+                                        : ""}
+                                </p>
+                            </div>
+                            {isTutor && !search && (
+                                <Button
+                                    size="sm"
+                                    onClick={() => setShowUploadForm(true)}
+                                    className="bg-red-800 hover:bg-black text-white text-xs font-bold uppercase h-9 px-4 gap-2 mt-2"
+                                >
+                                    <Upload className="w-3.5 h-3.5" />
+                                    Upload First Note
+                                </Button>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 gap-3">
+                            {filteredNotes.map((note: any) => (
+                                <NoteCard
+                                    key={note.id}
+                                    note={note}
+                                    isTutor={isTutor}
+                                    onDownload={() => handleDownload(note)}
+                                    onPreview={() => handlePreview(note)}
+                                    isLoadingDownload={isGettingDownloadUrl}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ─── Note Card ─────────────────────────────────────────────────────────────────
+const NoteCard = ({
+    note,
+    isTutor,
+    onDownload,
+    onPreview,
+    isLoadingDownload,
+}: {
+    note: any;
+    isTutor: boolean;
+    onDownload: () => void;
+    onPreview: () => void;
+    isLoadingDownload: boolean;
+}) => {
+    const ext = note.s3Key?.split(".").pop()?.toUpperCase() || "DOC";
+    const extColors: Record<string, string> = {
+        PDF: "bg-red-50 text-red-700",
+        DOC: "bg-blue-50 text-blue-700",
+        DOCX: "bg-blue-50 text-blue-700",
+        PPT: "bg-orange-50 text-orange-700",
+        PPTX: "bg-orange-50 text-orange-700",
+    };
+    const extColor = extColors[ext] || "bg-slate-50 text-slate-600";
+
+    return (
+        <div className="group flex items-center gap-4 p-4 bg-white border border-slate-200 rounded-xl hover:border-slate-300 hover:shadow-md transition-all duration-200">
+            {/* Icon */}
+            <div className={cn("h-11 w-11 rounded-xl flex flex-col items-center justify-center shrink-0 gap-0.5", extColor)}>
+                <FileText className="w-4 h-4" />
+                <span className="text-[8px] font-black">{ext}</span>
+            </div>
+
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-slate-900 truncate">{note.title}</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                    {new Date(note.createdAt).toLocaleDateString("en-US", {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                    })}
+                </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={onPreview}
+                    disabled={isLoadingDownload}
+                    className="h-8 px-3 text-[10px] font-bold uppercase text-slate-600 hover:text-slate-900 hover:bg-slate-100 gap-1"
+                >
+                    <Eye className="w-3 h-3" />
+                    Preview
+                </Button>
+                <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={onDownload}
+                    disabled={isLoadingDownload}
+                    className="h-8 px-3 text-[10px] font-bold uppercase text-red-800 hover:bg-red-50 gap-1"
+                >
+                    {isLoadingDownload ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                        <Download className="w-3 h-3" />
+                    )}
+                    Download
+                </Button>
+                {isTutor && (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-slate-400 hover:text-slate-700"
+                            >
+                                <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="text-xs">
+                            <DropdownMenuItem className="gap-2 text-red-600 focus:text-red-700 focus:bg-red-50">
+                                <Trash2 className="w-3.5 h-3.5" />
+                                Delete Note
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                )}
             </div>
         </div>
     );

@@ -23,25 +23,31 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const ManualEnrollmentForm = ({ course }: { course: any }) => {
-    const [accessCode, setAccessCode] = useState("");
-    const [isProcessing, setIsProcessing] = useState(false);
+    const [phoneNumber, setPhoneNumber] = useState("");
+    const { enrollCourse, isEnrollingCourse } = useCourses();
     const navigate = useNavigate();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!accessCode) {
-            toast.error("Please enter a valid activation code.");
+        if (!phoneNumber || phoneNumber.length < 9) {
+            toast.error("Please enter a valid phone number.");
             return;
         }
 
-        setIsProcessing(true);
-
-        // Simulate activation delay
-        setTimeout(() => {
-            toast.success("Activation successful! You are now enrolled.");
-            navigate("/courses?success=true");
-        }, 1500);
+        try {
+            const result = await enrollCourse({ 
+                courseId: course.id, 
+                data: { phoneNumber, paymentType: "FULL" } 
+            });
+            toast.success(result?.message || "Payment processing started. Check your phone.");
+            // Poll my-enrollments or direct back to course list
+            navigate("/courses?processing=true");
+        } catch (error: any) {
+            console.error("Enrollment error:", error);
+            const errData = error.response?.data?.error;
+            toast.error(errData?.message || error?.response?.data?.message || "Enrollment failed. Please try again.");
+        }
     };
 
     return (
@@ -50,14 +56,14 @@ const ManualEnrollmentForm = ({ course }: { course: any }) => {
                 <div className="bg-slate-50 p-6 rounded-lg border border-slate-100 mb-6">
                     <div className="space-y-3">
                         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                            <Key className="w-3 h-3 text-red-800" />
-                            Voucher / Activation Code
+                            <CreditCard className="w-3 h-3 text-red-800" />
+                            Mobile Money Phone Number
                         </label>
                         <input
                             type="text"
-                            value={accessCode}
-                            onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
-                            placeholder="ENTER VOUCHER CODE"
+                            value={phoneNumber}
+                            onChange={(e) => setPhoneNumber(e.target.value)}
+                            placeholder="e.g. 256700000000"
                             className="w-full bg-white border border-slate-200 rounded p-4 text-sm font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-red-800/20 focus:border-red-800 transition-all uppercase"
                         />
                     </div>
@@ -67,17 +73,17 @@ const ManualEnrollmentForm = ({ course }: { course: any }) => {
             <div className="space-y-4">
                 <Button
                     type="submit"
-                    disabled={isProcessing}
+                    disabled={isEnrollingCourse || !phoneNumber}
                     className="w-full bg-red-800 hover:bg-black text-white py-6 rounded text-sm uppercase tracking-widest font-bold shadow-lg shadow-red-900/20 transition-all active:scale-95"
                 >
-                    {isProcessing ? (
+                    {isEnrollingCourse ? (
                         <span className="flex items-center gap-2">
                             <Loader2 className="w-4 h-4 animate-spin" />
-                            Verifying Code...
+                            Processing Payment...
                         </span>
                     ) : (
                         <span className="flex items-center gap-2">
-                            Verify and Continue
+                            Pay & Enroll Now
                             <ArrowRight className="w-4 h-4" />
                         </span>
                     )}
@@ -85,7 +91,7 @@ const ManualEnrollmentForm = ({ course }: { course: any }) => {
 
                 <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400 uppercase font-bold tracking-tighter">
                     <Lock className="w-3 h-3" />
-                    256-bit Secure Verification Gateway
+                    Secure Mobile Payment Gateway
                 </div>
             </div>
         </form>

@@ -2,6 +2,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import type { CourseResponse, CreateCourseDto, UpdateCourseDto, ListCoursesDto } from "@/types/api";
 
+interface EnrollDto {
+  phoneNumber: string;
+  paymentType?: "FULL" | "PARTIAL";
+}
+
+interface PayBalanceDto {
+  phoneNumber: string;
+}
+
 export const useCourses = () => {
   const queryClient = useQueryClient();
 
@@ -22,12 +31,13 @@ export const useCourses = () => {
     enabled: !!id,
   });
 
-  const useGetMyEnrollments = () => useQuery({
+  const useGetMyEnrollments = (options?: { refetchInterval?: number }) => useQuery({
     queryKey: ["courses", "enrollments"],
     queryFn: async () => {
       const response = await apiClient.get<{ success: boolean; data: any }>("/courses/my-enrollments");
       return response.data;
     },
+    refetchInterval: options?.refetchInterval,
   });
 
   const createCourse = useMutation({
@@ -49,12 +59,50 @@ export const useCourses = () => {
     },
   });
 
+  const publishCourse = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiClient.post(`/courses/${id}/publish`);
+      return response.data;
+    },
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ["courses"] });
+      queryClient.invalidateQueries({ queryKey: ["courses", id] });
+    },
+  });
+
+  const completeCourse = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiClient.post(`/courses/${id}/complete`);
+      return response.data;
+    },
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ["courses"] });
+      queryClient.invalidateQueries({ queryKey: ["courses", id] });
+    },
+  });
+
+  const archiveCourse = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiClient.post(`/courses/${id}/archive`);
+      return response.data;
+    },
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ["courses"] });
+      queryClient.invalidateQueries({ queryKey: ["courses", id] });
+    },
+  });
+
   const enrollCourse = useMutation({
-    mutationFn: async (courseId: string) => {
-      // Backend expects an object with paymentType (default: FULL)
-      const response = await apiClient.post(`/courses/${courseId}/enroll`, {
-        paymentType: "FULL",
-      });
+    mutationFn: async ({ courseId, data }: { courseId: string; data: EnrollDto }) => {
+      const response = await apiClient.post(`/courses/${courseId}/enroll`, data);
+      return response.data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["courses", "enrollments"] }),
+  });
+
+  const payBalance = useMutation({
+    mutationFn: async ({ courseId, data }: { courseId: string; data: PayBalanceDto }) => {
+      const response = await apiClient.post(`/courses/${courseId}/pay-balance`, data);
       return response.data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["courses", "enrollments"] }),
@@ -75,7 +123,18 @@ export const useCourses = () => {
     useGetCourseStudents,
     useGetMyEnrollments,
     createCourse: createCourse.mutateAsync,
+    isCreatingCourse: createCourse.isPending,
     updateCourse: updateCourse.mutateAsync,
+    isUpdatingCourse: updateCourse.isPending,
+    publishCourse: publishCourse.mutateAsync,
+    isPublishingCourse: publishCourse.isPending,
+    completeCourse: completeCourse.mutateAsync,
+    isCompletingCourse: completeCourse.isPending,
+    archiveCourse: archiveCourse.mutateAsync,
+    isArchivingCourse: archiveCourse.isPending,
     enrollCourse: enrollCourse.mutateAsync,
+    isEnrollingCourse: enrollCourse.isPending,
+    payBalance: payBalance.mutateAsync,
+    isPayingBalance: payBalance.isPending,
   };
 };

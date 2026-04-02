@@ -26,7 +26,11 @@ export default function Login() {
             await login({ email, password });
             toast.success("Login successful!");
 
-            const from = location.state?.from?.pathname || "/onboard";
+            let from = location.state?.from?.pathname || "/onboard";
+            // Prevent circular redirects back to auth/verification pages
+            if (["/verify-email", "/login", "/signup", "/forgot-password", "/reset-password"].includes(from)) {
+                from = "/onboard";
+            }
             navigate(from, { replace: true });
         } catch (error: any) {
             console.error("Login Error:", error);
