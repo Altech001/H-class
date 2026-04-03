@@ -12,6 +12,7 @@ import Results from "./pages/Results";
 import Certification from "./pages/Certification";
 import Notes from "./pages/Notes";
 import ChatPanel from "./pages/chats/chatspanel";
+import SupportChat from "./pages/support";
 import Subdomains from "./pages/domains/subdomains";
 import Payments from "./pages/payments";
 import Settings from "./pages/settings";
@@ -58,6 +59,7 @@ const App = () => (
               <Route path="/certification" element={<Certification />} />
               <Route path="/notes" element={<Notes />} />
               <Route path="/chats" element={<ChatPanel />} />
+              <Route path="/support" element={<SupportChat />} />
               <Route path="/subdomains" element={<Subdomains />} />
               <Route path="/payments" element={<Payments />} />
               <Route path="/settings" element={<Settings />} />

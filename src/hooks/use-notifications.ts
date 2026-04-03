@@ -5,20 +5,23 @@ import type { NotificationResponse, RegisterPushTokenDto } from "@/types/api";
 export const useNotifications = () => {
   const queryClient = useQueryClient();
 
-  const useGetNotifications = () => useQuery({
-    queryKey: ["notifications"],
+  const useGetNotifications = (params?: { page?: number; pageSize?: number }) => useQuery({
+    queryKey: ["notifications", params],
     queryFn: async () => {
-      const response = await apiClient.get<{ success: boolean; data: NotificationResponse[] }>("/notifications");
-      return response.data.data;
+      const response = await apiClient.get<{ success: boolean; data: NotificationResponse[] }>("/notifications", { params });
+      return response.data;
     },
+    refetchInterval: 30000, // Poll notifications every 30s
   });
 
   const markAsRead = useMutation({
     mutationFn: async (id: string) => {
-      const response = await apiClient.patch(`/notifications/${id}/read`);
+      const response = await apiClient.patch<{ success: boolean; data: NotificationResponse }>(`/notifications/${id}/read`);
       return response.data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
   });
 
   const registerPushToken = useMutation({

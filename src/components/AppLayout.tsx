@@ -5,6 +5,7 @@ import { Bell, Search, LogOut, User as UserIcon, Settings } from "lucide-react";
 import { useUsers } from "@/hooks/use-users";
 import { useAuthStore } from "@/store/auth-store";
 import { useAuth } from "@/hooks/use-auth";
+import { useNotifications } from "@/hooks/use-notifications";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -12,7 +13,13 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
+import { cn } from "@/lib/utils";
+import { useEffect } from "react";
 
 const routeTitles: Record<string, string> = {
   "/": "Home - H-Class",
@@ -33,17 +40,46 @@ const routeTitles: Record<string, string> = {
 
 export function AppLayout() {
   const location = useLocation();
-  // Support dynamic routes like /courses/:id
   const baseRoute = "/" + location.pathname.split("/").filter(Boolean)[0];
   const title = routeTitles[location.pathname] || routeTitles[baseRoute] || "Dashboard";
 
-  // Silently hydrate latest user profile on mount
-  // This automatically calls setAuth/setUser in useUsers hooks via TanStack
+  // Notifications
+  const { useGetNotifications, markAsRead } = useNotifications();
+  const { data: notificationsData } = useGetNotifications();
+  const notifications = notificationsData?.data || [];
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      if (!id) return;
+      await markAsRead(id);
+    } catch (error) {
+      console.error("Failed to mark notification as read", error);
+    }
+  };
+
   const { useGetProfile } = useUsers();
   useGetProfile();
 
   const { user } = useAuthStore();
-  const { logout } = useAuth();
+  const { logout, isLoggingOut } = useAuth();
+  const { registerPushToken } = useNotifications();
+
+  useEffect(() => {
+    // Standard approach: Ask user for permission without coupling to Firebase SDK on the UI thread
+    if (user && "Notification" in window) {
+      if (Notification.permission === "default") {
+        Notification.requestPermission().then((permission) => {
+          if (permission === "granted") {
+            // Future: Implement generic serviceworker push subscription generating a token
+            // Then call registerPushToken({ token, platform: "web" }) internally
+            console.log("Notification permission granted via browser.");
+          }
+        });
+      }
+    }
+  }, [user]);
+
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -77,13 +113,60 @@ export function AppLayout() {
                 <p className="text-[13px] font-semibold">My Courses</p>
               </Link>
 
-              <button className="relative rounded-none p-2 text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground">
-                <Bell className="h-5 w-5" />
-                <span className="absolute right-1.5 top-1.5 flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-destructive" />
-                </span>
-              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="relative rounded-none p-2 text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground">
+                    <Bell className="h-5 w-5" />
+                    {unreadCount > 0 && (
+                      <span className="absolute right-1.5 top-1.5 flex h-4 w-4">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-75" />
+                        <span className="relative inline-flex h-4 w-4 bg-destructive rounded-full text-[10px] font-bold text-white items-center justify-center">
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </span>
+                      </span>
+                    )}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-80 p-0 font-sans shadow-xl">
+                  <DropdownMenuLabel className="p-4 font-black text-xs uppercase tracking-widest border-b">
+                    Notifications
+                  </DropdownMenuLabel>
+                  <ScrollArea className="h-80">
+                    {notifications.length === 0 ? (
+                      <div className="p-8 text-center text-xs text-muted-foreground font-bold uppercase opacity-30">
+                        No notifications
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-border/10">
+                        {notifications.map((n) => (
+                          <div 
+                            key={n.id} 
+                            onClick={() => !n.read && handleMarkAsRead(n.id)}
+                            className={cn(
+                              "p-4 hover:bg-slate-50 transition-colors cursor-pointer group",
+                              !n.read && "bg-slate-50/50"
+                            )}
+                          >
+                            <div className="flex justify-between items-start gap-2">
+                              <p className={cn(
+                                "text-sm leading-tight",
+                                !n.read ? "font-bold text-slate-950" : "font-medium text-slate-500"
+                              )}>
+                                {n.title}
+                              </p>
+                              {!n.read && <div className="h-2 w-2 rounded-full bg-primary shrink-0 mt-1" />}
+                            </div>
+                            <p className="text-xs text-slate-500 mt-1 line-clamp-2">{n.message}</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase mt-2">
+                              {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </ScrollArea>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               {user && (
                 <DropdownMenu>

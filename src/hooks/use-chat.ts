@@ -11,28 +11,30 @@ export const useChat = () => {
       const response = await apiClient.get<{ success: boolean; data: ConversationResponse[] }>("/chat");
       return response.data.data;
     },
+    refetchInterval: 15000, // Poll conversations every 15s
   });
 
-  const useGetMessages = (conversationId: string) => useQuery({
-    queryKey: ["chat", "messages", conversationId],
+  const useGetMessages = (conversationId: string, params?: { page?: number; pageSize?: number }) => useQuery({
+    queryKey: ["chat", "messages", conversationId, params],
     queryFn: async () => {
-      const response = await apiClient.get<{ success: boolean; data: MessageResponse[] }>(`/chat/${conversationId}/messages`);
+      const response = await apiClient.get<{ success: boolean; data: MessageResponse[] }>(`/chat/${conversationId}/messages`, { params });
       return response.data.data;
     },
     enabled: !!conversationId,
+    refetchInterval: 5000, // Poll messages every 5s when active
   });
 
   const createConversation = useMutation({
     mutationFn: async (data: CreateConversationDto) => {
-      const response = await apiClient.post("/chat", data);
-      return response.data;
+      const response = await apiClient.post<{ success: boolean; data: ConversationResponse }>("/chat", data);
+      return response.data.data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["chat", "conversations"] }),
   });
 
   const sendMessage = useMutation({
     mutationFn: async ({ conversationId, data }: { conversationId: string, data: SendMessageDto }) => {
-      const response = await apiClient.post(`/chat/${conversationId}/messages`, data);
+      const response = await apiClient.post<{ success: boolean; data: MessageResponse }>(`/chat/${conversationId}/messages`, data);
       return response.data;
     },
     onSuccess: (_, variables) => {

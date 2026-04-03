@@ -46,8 +46,9 @@ const mainMenu = [
 const secondaryMenu = [
   { title: "Payments & Finance", url: "/payments", icon: HelpCircle },
   { title: "Domain & Hosting", url: "/subdomains", icon: Settings },
-  { title: "Chat Support", url: "/chats", icon: MessageCircleIcon },
-  { title: "Account Settings", url: "/settings", icon: HelpCircle },
+  { title: "Messages", url: "/chats", icon: MessageCircleIcon },
+  { title: "Help & Support", url: "/support", icon: ShieldAlert },
+  { title: "Account Settings", url: "/settings", icon: Settings },
 ];
 
 //ADMIN & STAFF MENU
